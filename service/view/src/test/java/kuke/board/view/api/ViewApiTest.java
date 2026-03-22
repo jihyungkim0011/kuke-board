@@ -1,0 +1,37 @@
+package kuke.board.view.api;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class ViewApiTest {
+    RestClient restClient = RestClient.create("http://localhost:9003");
+
+    @Test
+    void
+    viewTest() throws InterruptedException {
+        ExecutorService executorService = Executors.newFixedThreadPool(100);
+        CountDownLatch latch = new CountDownLatch(10000);
+
+        for (int i = 0; i < 10000; i++) {
+            executorService.submit(() -> {
+                restClient.post()
+                        .uri("/v1/article-views/articles/{articleId}/users/{userId}", 4L, 1L)
+                        .retrieve();
+                latch.countDown();
+            });
+        }
+        latch.await();
+
+        Long count = restClient.get()
+                .uri("/v1/article-views/aritlces/{articleId}/count", 4L)
+                .retrieve()
+                .body(Long.class);
+
+        System.out.println("count = " + count); // 10000건 집계 1204 ms -> 인메모리로 카운트하여 빠르다.
+                                                // 분산락 추가: 1회만 집계
+    }
+}
